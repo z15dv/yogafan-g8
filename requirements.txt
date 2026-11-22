@@ -1,0 +1,3 @@
+PySide6==6.8.3
+nvidia-ml-py>=12.560,<14
+pyinstaller>=6.10,<7
