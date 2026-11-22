@@ -65,6 +65,9 @@ class AppSettings:
             "run_in_background": self._settings.value(
                 "app/run_in_background", True, type=bool
             ),
+            "temperature_notifications_enabled": self._settings.value(
+                "notifications/temperature_enabled", True, type=bool
+            ),
             "thermal_protection_enabled": self._settings.value(
                 "safety/thermal_protection_enabled", True, type=bool
             ),

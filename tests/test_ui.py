@@ -387,6 +387,22 @@ class UiBehaviorTests(unittest.TestCase):
         self.assertIn("not being saved", window.message.text())
         window.deleteLater()
 
+    def test_temperature_notifications_can_be_disabled_without_disabling_protection(self) -> None:
+        window, _backend, _worker = self._window()
+        window.tray = FakeTray()
+        window.temperature_notifications.setChecked(False)
+
+        window._update_telemetry(Telemetry(90, 60, 0, 30, 31))
+        self.assertEqual(window.tray.messages, [])
+        self.assertTrue(window.thermal_protection.isChecked())
+        self.assertEqual(window.warning.text(), "High CPU temperature")
+
+        window._update_telemetry(Telemetry(80, 60, 0, 30, 31))
+        window.temperature_notifications.setChecked(True)
+        window._update_telemetry(Telemetry(90, 60, 0, 30, 31))
+        self.assertEqual(len(window.tray.messages), 1)
+        window.deleteLater()
+
     def test_checkbox_styles_never_fall_back_to_black_widget_background(self) -> None:
         window, _backend, _worker = self._window()
         style = window.styleSheet()
@@ -582,12 +598,14 @@ class UiBehaviorTests(unittest.TestCase):
         store = DictQSettings()
         defaults = AppSettings(store).load()
         self.assertTrue(defaults["run_in_background"])
+        self.assertTrue(defaults["temperature_notifications_enabled"])
         self.assertTrue(defaults["thermal_protection_enabled"])
         self.assertEqual(defaults["cpu_critical_c"], 95)
         self.assertEqual(defaults["gpu_critical_c"], 85)
         AppSettings(store).save(
             {
                 "app/run_in_background": False,
+                "notifications/temperature_enabled": False,
                 "safety/thermal_protection_enabled": False,
                 "safety/cpu_critical_c": 98,
                 "safety/gpu_critical_c": 88,
@@ -595,6 +613,7 @@ class UiBehaviorTests(unittest.TestCase):
         )
         loaded = AppSettings(store).load()
         self.assertFalse(loaded["run_in_background"])
+        self.assertFalse(loaded["temperature_notifications_enabled"])
         self.assertFalse(loaded["thermal_protection_enabled"])
         self.assertEqual(loaded["cpu_critical_c"], 98)
         self.assertEqual(loaded["gpu_critical_c"], 88)

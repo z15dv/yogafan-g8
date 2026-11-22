@@ -482,6 +482,23 @@ class MainWindow(QMainWindow):
         nvml_hint.setWordWrap(True)
         settings_layout.addWidget(nvml_hint, 3, 0, 1, 4)
 
+        self.temperature_notifications = QCheckBox(
+            "Windows temperature notifications"
+        )
+        self.temperature_notifications.setChecked(True)
+        self.temperature_notifications.setMinimumWidth(0)
+        self.temperature_notifications.setSizePolicy(
+            QSizePolicy.Ignored, QSizePolicy.Fixed
+        )
+        settings_layout.addWidget(self.temperature_notifications, 4, 0, 1, 4)
+        notification_hint = QLabel(
+            "Shows Windows popups for high CPU/GPU temperatures. Turning this "
+            "off does not disable automatic thermal protection."
+        )
+        notification_hint.setObjectName("settingHint")
+        notification_hint.setWordWrap(True)
+        settings_layout.addWidget(notification_hint, 5, 0, 1, 4)
+
         self.thermal_protection = QCheckBox(
             "Automatic thermal protection (recommended)"
         )
@@ -490,14 +507,14 @@ class MainWindow(QMainWindow):
         self.thermal_protection.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.Fixed
         )
-        settings_layout.addWidget(self.thermal_protection, 4, 0, 1, 4)
+        settings_layout.addWidget(self.thermal_protection, 6, 0, 1, 4)
         thermal_hint = QLabel(
             "At the limits below, YogaFan switches fan control to Lenovo Auto. "
             "It does not shut down Windows."
         )
         thermal_hint.setObjectName("settingHint")
         thermal_hint.setWordWrap(True)
-        settings_layout.addWidget(thermal_hint, 5, 0, 1, 4)
+        settings_layout.addWidget(thermal_hint, 7, 0, 1, 4)
 
         cpu_limit_label = QLabel("CPU limit")
         cpu_limit_label.setObjectName("settingValueLabel")
@@ -527,10 +544,10 @@ class MainWindow(QMainWindow):
         self.gpu_critical_limit.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.Fixed
         )
-        settings_layout.addWidget(cpu_limit_label, 6, 0)
-        settings_layout.addWidget(self.cpu_critical_limit, 6, 1, 1, 3)
-        settings_layout.addWidget(gpu_limit_label, 7, 0)
-        settings_layout.addWidget(self.gpu_critical_limit, 7, 1, 1, 3)
+        settings_layout.addWidget(cpu_limit_label, 8, 0)
+        settings_layout.addWidget(self.cpu_critical_limit, 8, 1, 1, 3)
+        settings_layout.addWidget(gpu_limit_label, 9, 0)
+        settings_layout.addWidget(self.gpu_critical_limit, 9, 1, 1, 3)
         settings_layout.setColumnStretch(1, 1)
         outer.addWidget(settings_card)
 
@@ -600,6 +617,9 @@ class MainWindow(QMainWindow):
     def _connect_settings_controls(self) -> None:
         self.run_in_background.toggled.connect(self._background_setting_changed)
         self.nvml_fallback.toggled.connect(self._nvml_setting_changed)
+        self.temperature_notifications.toggled.connect(
+            self._temperature_notifications_changed
+        )
         # ``clicked`` runs after the mouse release.  A modal warning opened from
         # ``toggled`` can otherwise cause the original click to toggle the box a
         # second time when the dialog closes.
@@ -644,6 +664,9 @@ class MainWindow(QMainWindow):
         self.link_fans.setChecked(values["link_fans"])
         self.nvml_fallback.setChecked(values.get("nvml_fallback", True))
         self.run_in_background.setChecked(values.get("run_in_background", True))
+        self.temperature_notifications.setChecked(
+            values.get("temperature_notifications_enabled", True)
+        )
         thermal_enabled = values.get("thermal_protection_enabled", True)
         cpu_critical_c = values.get("cpu_critical_c", 95)
         gpu_critical_c = values.get("gpu_critical_c", 85)
@@ -701,6 +724,9 @@ class MainWindow(QMainWindow):
                 "curves/selected_profile": self.current_profile.value,
                 "sensors/nvml_fallback": self.nvml_fallback.isChecked(),
                 "app/run_in_background": self.run_in_background.isChecked(),
+                "notifications/temperature_enabled": (
+                    self.temperature_notifications.isChecked()
+                ),
                 "safety/thermal_protection_enabled": (
                     self.thermal_protection.isChecked()
                 ),
@@ -714,6 +740,13 @@ class MainWindow(QMainWindow):
 
     def _nvml_setting_changed(self, enabled: bool) -> None:
         self.worker.request_nvml_fallback(enabled)
+        self._save_settings()
+
+    def _temperature_notifications_changed(self, enabled: bool) -> None:
+        state = "on" if enabled else "off"
+        self.message.setText(
+            f"Windows temperature notifications {state} · thermal protection unchanged"
+        )
         self._save_settings()
 
     def _restore_accepted_thermal_settings(self) -> None:
@@ -952,16 +985,17 @@ class MainWindow(QMainWindow):
                 else ""
             )
         for notification in notifications:
-            show_temperature_notification(
-                self.tray,
-                notification,
-                auto_restore_confirmed=(
-                    self._protection_restore_confirmed
-                    if notification.level is WarningLevel.CRITICAL
-                    else None
-                ),
-                protection_enabled=self.thermal_protection.isChecked(),
-            )
+            if self.temperature_notifications.isChecked():
+                show_temperature_notification(
+                    self.tray,
+                    notification,
+                    auto_restore_confirmed=(
+                        self._protection_restore_confirmed
+                        if notification.level is WarningLevel.CRITICAL
+                        else None
+                    ),
+                    protection_enabled=self.thermal_protection.isChecked(),
+                )
             self.log.warning(
                 "Temperature warning: %s=%s °C",
                 notification.component,

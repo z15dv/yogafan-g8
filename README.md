@@ -229,6 +229,14 @@ optional NVML fallback can query the NVIDIA GPU. It is lazy and throttled to
 reduce unnecessary wake-ups of a sleeping discrete GPU. Disable it if preserving
 dGPU sleep is more important than showing a fallback GPU temperature.
 
+### Windows temperature notifications
+
+Enabled by default. Disable this setting to suppress Windows popup notifications
+for high CPU or GPU temperatures. The in-app warning state and automatic thermal
+protection remain active. Notification rearming also uses a small temperature
+hysteresis so readings fluctuating directly around a threshold do not repeatedly
+trigger the same popup.
+
 ### Automatic thermal protection
 
 Controls the YogaFan-specific temperature-triggered Lenovo Auto handoff described

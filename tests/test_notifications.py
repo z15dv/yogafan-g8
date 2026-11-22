@@ -45,6 +45,20 @@ class TemperatureWarningTests(unittest.TestCase):
             ),
         )
 
+    def test_threshold_jitter_does_not_repeat_notification(self) -> None:
+        tracker = TemperatureWarningTracker()
+        self.assertEqual(
+            tracker.update(90),
+            (WarningLevel.HIGH, [TemperatureWarning("CPU", WarningLevel.HIGH, 90)]),
+        )
+        self.assertEqual(tracker.update(89), (WarningLevel.NORMAL, []))
+        self.assertEqual(tracker.update(90), (WarningLevel.HIGH, []))
+        self.assertEqual(tracker.update(87), (WarningLevel.NORMAL, []))
+        self.assertEqual(
+            tracker.update(90),
+            (WarningLevel.HIGH, [TemperatureWarning("CPU", WarningLevel.HIGH, 90)]),
+        )
+
     def test_gpu_thresholds_are_independent_and_missing_is_not_zero(self) -> None:
         tracker = TemperatureWarningTracker()
         self.assertEqual(tracker.update(60, 82), (WarningLevel.NORMAL, []))

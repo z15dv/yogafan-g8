@@ -23,6 +23,7 @@ class TemperatureWarning:
 
 class TemperatureWarningTracker:
     THRESHOLDS = {"CPU": (90, 95), "GPU": (83, 85)}
+    REARM_HYSTERESIS_C = {"CPU": 3, "GPU": 2}
 
     def __init__(
         self,
@@ -39,6 +40,13 @@ class TemperatureWarningTracker:
             "GPU": (int(gpu_critical_c) - 2, int(gpu_critical_c)),
         }
         self.levels = {"CPU": WarningLevel.NORMAL, "GPU": WarningLevel.NORMAL}
+        self._notification_armed = {
+            component: {
+                WarningLevel.HIGH: True,
+                WarningLevel.CRITICAL: True,
+            }
+            for component in self.thresholds
+        }
 
     @property
     def level(self) -> WarningLevel:
@@ -64,14 +72,27 @@ class TemperatureWarningTracker:
             current = self._level(value, high, critical)
             previous = self.levels[component]
             if value is not None:
-                if previous < WarningLevel.HIGH <= current:
+                rearm_delta = self.REARM_HYSTERESIS_C[component]
+                if value <= high - rearm_delta:
+                    self._notification_armed[component][WarningLevel.HIGH] = True
+                if value <= critical - rearm_delta:
+                    self._notification_armed[component][WarningLevel.CRITICAL] = True
+                if (
+                    previous < WarningLevel.HIGH <= current
+                    and self._notification_armed[component][WarningLevel.HIGH]
+                ):
                     notifications.append(
                         TemperatureWarning(component, WarningLevel.HIGH, value)
                     )
-                if previous < WarningLevel.CRITICAL <= current:
+                    self._notification_armed[component][WarningLevel.HIGH] = False
+                if (
+                    previous < WarningLevel.CRITICAL <= current
+                    and self._notification_armed[component][WarningLevel.CRITICAL]
+                ):
                     notifications.append(
                         TemperatureWarning(component, WarningLevel.CRITICAL, value)
                     )
+                    self._notification_armed[component][WarningLevel.CRITICAL] = False
             self.levels[component] = current
         return self.level, notifications
 
