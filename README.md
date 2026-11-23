@@ -44,6 +44,9 @@ and curve-based controls in a dark, responsive PySide6 interface.
   the UI.
 - Closing the window can keep monitoring active in the Windows system tray.
 
+<img width="3072" height="1824" alt="image" src="https://github.com/user-attachments/assets/7e5ef6c3-1e6e-4eda-9bc9-bc9b913a4b7d" />
+
+
 ### Important control behavior
 
 When switching from Lenovo Auto to Manual, the sliders pick up from the current
